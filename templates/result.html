@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Saad Web Scraper (SWS) - Complete</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%); /* Dark Blue Palette */
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            padding: 20px 0;
+        }
+        .success-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            overflow: hidden;
+            text-align: center;
+        }
+        .success-header {
+            background: linear-gradient(45deg, #11998e, #38ef7d);
+            color: white;
+            padding: 40px 20px;
+        }
+        .success-icon {
+            font-size: 4rem;
+            margin-bottom: 15px;
+        }
+        .stat-row {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin: 30px 0;
+        }
+        .stat-item {
+            background: #f8f9fa;
+            padding: 15px 25px;
+            border-radius: 10px;
+            border: 1px solid #eee;
+        }
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #2c3e50;
+        }
+        .stat-label {
+            color: #6c757d;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .btn-lg {
+            padding: 12px 30px;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-6">
+                <div class="card success-card">
+                    <div class="success-header">
+                        <div class="success-icon">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <h2 class="fw-bold mb-0">Scraping Completed!</h2>
+                        <p class="mb-0 mt-2 opacity-75">Data has been successfully extracted</p>
+                    </div>
+                    
+                    <div class="card-body p-4 p-md-5">
+                        <div class="stat-row">
+                            <div class="stat-item">
+                                <div class="stat-value">{{ pages }}</div>
+                                <div class="stat-label">Pages Scraped</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">{{ products }}</div>
+                                <div class="stat-label">Products Found</div>
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-3">
+                            <a href="/download" class="btn btn-success btn-lg shadow-sm">
+                                <i class="fas fa-download me-2"></i>Download CSV
+                            </a>
+                            <a href="/" class="btn btn-outline-secondary btn-lg">
+                                <i class="fas fa-redo me-2"></i>Scrape Another URL
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="text-center mt-4 text-white opacity-75 small">
+                    &copy; 2025 Saad Naiem Ali &trade; | All Rights Reserved
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

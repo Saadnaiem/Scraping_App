@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Saad Web Scraper (SWS)</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%); /* Dark Blue Palette */
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            padding: 20px 0;
+        }
+        .main-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            overflow: hidden;
+        }
+        .card-header {
+            background: transparent;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            padding: 30px;
+        }
+        .brand-color {
+            color: #0f2027; /* Dark Blue */
+        }
+        .form-control:focus {
+            box-shadow: 0 0 0 0.25rem rgba(32, 58, 67, 0.25);
+            border-color: #203a43;
+        }
+        .btn-primary {
+            background: linear-gradient(45deg, #0f2027, #203a43);
+            border: none;
+            padding: 12px 30px;
+            font-weight: 600;
+            border-radius: 10px;
+            transition: all 0.3s;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(15, 32, 39, 0.4);
+            background: linear-gradient(45deg, #203a43, #2c5364);
+        }
+        .btn-warning {
+            color: white;
+            background: linear-gradient(45deg, #f09819, #edde5d);
+            border: none;
+            font-weight: 600;
+        }
+        .btn-success {
+            background: linear-gradient(45deg, #11998e, #38ef7d);
+            border: none;
+            font-weight: 600;
+        }
+        .stat-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            transition: all 0.3s;
+            border: 1px solid rgba(0,0,0,0.05);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.03);
+        }
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.1);
+            border-color: #203a43;
+        }
+        .stat-value {
+            font-size: 2.2rem;
+            font-weight: 800;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+        .stat-label {
+            color: #6c757d;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+        }
+        .progress-section {
+            display: none;
+            animation: fadeIn 0.5s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .spinner-container {
+            display: none;
+            margin: 20px 0;
+        }
+    </style>
+    <script>
+        let currentJobId = null;
+
+        async function startScraping(event) {
+            event.preventDefault();
+            const urlInput = document.querySelector('input[name="url"]');
+            const url = urlInput.value;
+            
+            if (!url) return;
+
+            // Reset UI
+            document.getElementById('spinner-container').style.display = 'block';
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-circle-notch fa-spin me-2"></i>Starting...';
+            
+            document.getElementById('progress-container').style.display = 'block';
+            document.getElementById('error-alert').style.display = 'none';
+            document.getElementById('control-buttons').style.display = 'none';
+
+            try {
+                const response = await fetch('/scrape', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: url })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    currentJobId = data.job_id;
+                    submitBtn.innerHTML = '<i class="fas fa-sync fa-spin me-2"></i>Scraping in progress...';
+                    document.getElementById('control-buttons').style.display = 'block';
+                    updateControlButtons('running');
+                    pollStatus(data.job_id);
+                } else {
+                    throw new Error(data.error || 'Failed to start scraping');
+                }
+            } catch (error) {
+                showError(error.message);
+                resetUI();
+            }
+        }
+
+        async function togglePause() {
+            if (!currentJobId) return;
+            
+            const pauseBtn = document.getElementById('pauseBtn');
+            const isPaused = pauseBtn.getAttribute('data-status') === 'paused';
+            const endpoint = isPaused ? `/resume/${currentJobId}` : `/pause/${currentJobId}`;
+            
+            try {
+                const response = await fetch(endpoint, { method: 'POST' });
+                const data = await response.json();
+                
+                if (response.ok) {
+                    updateControlButtons(data.status);
+                }
+            } catch (error) {
+                console.error('Error toggling pause:', error);
+            }
+        }
+
+        function updateControlButtons(status) {
+            const pauseBtn = document.getElementById('pauseBtn');
+            const statusBadge = document.getElementById('status-badge');
+            
+            if (status === 'paused') {
+                pauseBtn.innerHTML = '<i class="fas fa-play me-2"></i>Resume Scraping';
+                pauseBtn.className = 'btn btn-success';
+                pauseBtn.setAttribute('data-status', 'paused');
+                statusBadge.className = 'badge bg-warning text-dark mb-3';
+                statusBadge.innerText = 'PAUSED';
+                statusBadge.style.display = 'inline-block';
+            } else {
+                pauseBtn.innerHTML = '<i class="fas fa-pause me-2"></i>Pause Scraping';
+                pauseBtn.className = 'btn btn-warning';
+                pauseBtn.setAttribute('data-status', 'running');
+                statusBadge.style.display = 'none';
+            }
+        }
+
+        function showError(msg) {
+            const alert = document.getElementById('error-alert');
+            alert.textContent = msg;
+            alert.style.display = 'block';
+        }
+
+        async function pollStatus(jobId) {
+            const interval = setInterval(async () => {
+                try {
+                    const response = await fetch(`/status/${jobId}`);
+                    const data = await response.json();
+                    
+                    if (response.ok) {
+                        // Update stats with animation
+                        updateStat('timer', formatTime(data.elapsed_time));
+                        updateStat('pages-count', data.pages);
+                        updateStat('products-count', data.products);
+                        
+                        if (data.status === 'completed') {
+                            clearInterval(interval);
+                            window.location.href = `/result/${jobId}`;
+                        } else if (data.status === 'failed') {
+                            clearInterval(interval);
+                            showError('Scraping failed: ' + data.error);
+                            resetUI();
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error polling status:', error);
+                }
+            }, 1000);
+        }
+
+        function updateStat(id, newValue) {
+            const el = document.getElementById(id);
+            if (el.innerText !== String(newValue)) {
+                el.innerText = newValue;
+                el.style.color = '#203a43';
+                setTimeout(() => el.style.color = '#2c3e50', 300);
+            }
+        }
+
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        function resetUI() {
+            document.getElementById('spinner-container').style.display = 'none';
+            document.getElementById('control-buttons').style.display = 'none';
+            const btn = document.getElementById('submitBtn');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-search me-2"></i>Start Scraping';
+        }
+    </script>
+</head>
+<body>
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-6 col-md-8 col-sm-12"> <!-- Adjusted for mobile responsiveness -->
+                <div class="card main-card">
+                    <div class="card-header text-center">
+                        <h2 class="mb-0 fw-bold"><i class="fas fa-spider brand-color me-2"></i>Saad Web Scraper (SWS)</h2>
+                        <p class="text-muted mt-2 mb-0">Professional Data Extraction Tool</p>
+                    </div>
+                    <div class="card-body p-4">
+                        
+                        <div id="error-alert" class="alert alert-danger" style="display: none;" role="alert"></div>
+
+                        <form onsubmit="startScraping(event)" class="mb-4">
+                            <div class="mb-4">
+                                <label class="form-label text-muted fw-bold small">TARGET URL</label>
+                                <div class="input-group input-group-lg">
+                                    <span class="input-group-text bg-light border-end-0">
+                                        <i class="fas fa-link text-muted"></i>
+                                    </span>
+                                    <input type="text" name="url" class="form-control border-start-0 ps-0" 
+                                           placeholder="https://www.nahdionline.com/en-sa/..." required>
+                                </div>
+                                <div class="form-text mt-2">
+                                    <i class="fas fa-info-circle me-1"></i> Paste the category page URL you wish to scrape
+                                </div>
+                            </div>
+                            
+                            <div class="d-grid">
+                                <button type="submit" id="submitBtn" class="btn btn-primary btn-lg">
+                                    <i class="fas fa-search me-2"></i>Start Scraping
+                                </button>
+                            </div>
+                        </form>
+
+                        <div id="spinner-container" class="spinner-container text-center">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="text-muted mt-2 small">Initializing Saad Web Scraper (SWS)...</p>
+                        </div>
+
+                        <div id="progress-container" class="progress-section">
+                            <div class="text-center mb-3">
+                                <span id="status-badge" class="badge bg-warning text-dark" style="display:none;">PAUSED</span>
+                            </div>
+                            
+                            <h5 class="text-center mb-4 text-muted">Live Progress</h5>
+                            <div class="row g-3 text-center">
+                                <div class="col-4">
+                                    <div class="stat-card p-2">
+                                        <div class="stat-value fs-4" id="timer">00:00</div>
+                                        <div class="stat-label small"><i class="far fa-clock me-1"></i>Time</div>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="stat-card p-2">
+                                        <div class="stat-value fs-4" id="pages-count">0</div>
+                                        <div class="stat-label small"><i class="far fa-file-alt me-1"></i>Pages</div>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="stat-card p-2">
+                                        <div class="stat-value fs-4" id="products-count">0</div>
+                                        <div class="stat-label small"><i class="fas fa-box-open me-1"></i>Items</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div id="control-buttons" class="text-center mt-4" style="display: none;">
+                                <button id="pauseBtn" class="btn btn-warning" onclick="togglePause()">
+                                    <i class="fas fa-pause me-2"></i>Pause Scraping
+                                </button>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+                <div class="text-center mt-4 text-white opacity-75 small">
+                    &copy; 2025 Saad Naiem Ali &trade; | All Rights Reserved
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
