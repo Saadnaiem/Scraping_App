@@ -36,4 +36,4 @@ ENV PORT=5000
 EXPOSE 5000
 
 # Run the application
-CMD gunicorn --bind 0.0.0.0:$PORT app:app
+CMD gunicorn --workers 1 --threads 8 --bind 0.0.0.0:$PORT app:app
